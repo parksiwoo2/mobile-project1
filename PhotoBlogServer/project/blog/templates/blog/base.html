@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Photo blog</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        color: #222;
+        background: #fff;
+      }
+      header {
+        background: #ff9800;
+        padding: 28px;
+      }
+      header a {
+        color: white;
+        text-decoration: none;
+      }
+      header h1 {
+        margin: 0;
+        font-style: italic;
+      }
+      nav {
+        padding: 16px 28px;
+        border-bottom: 1px solid #ddd;
+      }
+      nav a {
+        margin-right: 16px;
+      }
+      main {
+        max-width: 900px;
+        margin: 24px auto;
+        padding: 0 24px;
+      }
+      article {
+        margin-bottom: 36px;
+      }
+      article img {
+        max-width: 100%;
+        max-height: 480px;
+      }
+      small {
+        color: #666;
+      }
+      p {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      h2 {
+        overflow-wrap: anywhere;
+      }
+      input,
+      textarea,
+      button {
+        font: inherit;
+        padding: 8px;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      textarea {
+        width: 100%;
+      }
+      pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        background: #f5f5f5;
+        padding: 16px;
+      }
+      .errorlist {
+        color: #b00020;
+      }
+      a {
+        color: #304b91;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1><a href="/">Photo blog</a></h1>
+    </header>
+    <nav>
+      <a href="/">목록</a><a href="/post/new/">새 글</a
+      ><a href="/api_root/Post/">API</a><a href="/js_test/">JSON 검증</a>{% if
+      not user.is_authenticated %}<a href="/api-auth/login/?next=/">로그인</a>{%
+      endif %}
+    </nav>
+    <main>{% block content %}{% endblock %}</main>
+  </body>
+</html>

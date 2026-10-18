@@ -1,0 +1,13 @@
+{% extends "blog/base.html" %} {% block content %} {% for post in posts %}
+<article>
+  <small>{{ post.published_date|date:"Y년 m월 d일 H:i" }}</small>
+  <h2><a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a></h2>
+  <p>{{ post.text }}</p>
+  <img src="{{ post.image.url }}" alt="{{ post.title }}" />
+</article>
+{% empty %}
+<p>
+  아직 게시물이 없습니다. 로그인 후 새 글을 작성하거나 Android 앱에서
+  업로드하세요.
+</p>
+{% endfor %} {% endblock %}

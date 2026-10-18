@@ -1,0 +1,14 @@
+{% extends "blog/base.html" %} {% block content %}
+<article>
+  <small
+    >{{ post.published_date|date:"Y-m-d H:i" }} · {{ post.author|default:"기존
+    작성자" }}</small
+  >
+  <h2>{{ post.title }}</h2>
+  <p>{{ post.text }}</p>
+  <img src="{{ post.image.url }}" alt="{{ post.title }}" />
+</article>
+{% if user == post.author or user.is_staff %}<a
+  href="{% url 'post_edit' post.pk %}"
+  >수정</a
+>{% endif %}{% endblock %}

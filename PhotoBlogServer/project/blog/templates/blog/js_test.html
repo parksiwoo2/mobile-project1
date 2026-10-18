@@ -1,0 +1,104 @@
+{% extends "blog/base.html" %} {% block content %}
+<h2>API 응답 / JSON Array 검증</h2>
+<p>
+  /api_root/Post/의 HTTP 상태, 응답 헤더, JSON 본문과 필드 형식을 확인합니다.
+</p>
+<button id="load">서버 응답 가져오기</button>
+<p id="status">검증 대기</p>
+<pre id="headers"></pre>
+<label for="source">Message Body</label
+><textarea id="source" rows="10"></textarea
+><button id="validate">본문 검증</button>
+<h3>정렬된 JSON</h3>
+<pre id="pretty"></pre>
+<h3>Tree</h3>
+<div id="tree"></div>
+<script>
+  const source = document.getElementById("source");
+  const status = document.getElementById("status");
+  function validate() {
+    const tree = document.getElementById("tree");
+    tree.replaceChildren();
+    document.getElementById("pretty").textContent = "";
+    try {
+      const data = JSON.parse(source.value);
+      if (!Array.isArray(data))
+        throw new Error("최상위 데이터가 배열이 아닙니다.");
+      for (const [index, post] of data.entries()) {
+        if (post === null || typeof post !== "object" || Array.isArray(post))
+          throw new Error(index + "번 게시물이 객체가 아닙니다.");
+        for (const key of [
+          "author",
+          "title",
+          "text",
+          "created_date",
+          "published_date",
+          "image",
+        ]) {
+          if (!(key in post))
+            throw new Error(index + "번 게시물의 " + key + " 필드가 없습니다.");
+        }
+        if (post.author !== null && !Number.isInteger(post.author))
+          throw new Error("author는 정수여야 합니다.");
+        for (const key of [
+          "title",
+          "text",
+          "created_date",
+          "published_date",
+          "image",
+        ]) {
+          if (typeof post[key] !== "string")
+            throw new Error(key + "는 문자열이어야 합니다.");
+        }
+        for (const key of ["created_date", "published_date"]) {
+          if (Number.isNaN(Date.parse(post[key])))
+            throw new Error(key + "의 날짜 형식이 잘못되었습니다.");
+        }
+        if (!["http:", "https:"].includes(new URL(post.image).protocol))
+          throw new Error("image는 HTTP(S) 절대 주소여야 합니다.");
+        const branch = document.createElement("details");
+        branch.open = true;
+        const summary = document.createElement("summary");
+        summary.textContent = "[" + index + "] " + post.title;
+        const values = document.createElement("pre");
+        values.textContent = JSON.stringify(post, null, 2);
+        branch.append(summary, values);
+        tree.append(branch);
+      }
+      document.getElementById("pretty").textContent = JSON.stringify(
+        data,
+        null,
+        2,
+      );
+      status.textContent =
+        "검증 성공 · JSON Array · 게시물 " + data.length + "개";
+    } catch (error) {
+      tree.replaceChildren();
+      status.textContent = "검증 실패 · " + error.message;
+    }
+  }
+  document.getElementById("validate").onclick = validate;
+  document.getElementById("load").onclick = async () => {
+    status.textContent = "요청 중...";
+    try {
+      const response = await fetch("/api_root/Post/", {
+        headers: { Accept: "application/json" },
+      });
+      document.getElementById("headers").textContent =
+        "HTTP " +
+        response.status +
+        " " +
+        response.statusText +
+        "\n" +
+        Array.from(response.headers, ([key, value]) => key + ": " + value).join(
+          "\n",
+        );
+      source.value = await response.text();
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      validate();
+    } catch (error) {
+      status.textContent = "요청 실패 · " + error.message;
+    }
+  };
+</script>
+{% endblock %}
