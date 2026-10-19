@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+<EditText android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="제목" android:inputType="text" android:maxLength="100" android:singleLine="true"/>
+<EditText android:id="@+id/content" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="내용" android:inputType="textMultiLine" android:maxLength="2000" android:minLines="3"/>
+<Button android:id="@+id/choose" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="사진 선택"/>
+<TextView android:id="@+id/selectedName" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="JPEG · PNG · WEBP / 5MB 이하"/>
+</LinearLayout></ScrollView>

@@ -54,6 +54,7 @@
       }
       input,
       textarea,
+      select,
       button {
         font: inherit;
         padding: 8px;
@@ -75,6 +76,14 @@
       a {
         color: #304b91;
       }
+      .filters, .actions, .pagination {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+      .pagination { padding: 16px 0; }
     </style>
   </head>
   <body>
@@ -83,9 +92,7 @@
     </header>
     <nav>
       <a href="/">목록</a><a href="/post/new/">새 글</a
-      ><a href="/api_root/Post/">API</a><a href="/js_test/">JSON 검증</a>{% if
-      not user.is_authenticated %}<a href="/api-auth/login/?next=/">로그인</a>{%
-      endif %}
+      ><a href="/api_root/Post/">API</a><a href="/js_test/">JSON 검증</a>{% if not user.is_authenticated %}<a href="/api-auth/login/?next=/">로그인</a>{% endif %}
     </nav>
     <main>{% block content %}{% endblock %}</main>
   </body>

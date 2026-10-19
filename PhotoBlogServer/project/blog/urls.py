@@ -9,6 +9,8 @@ urlpatterns = [
     path("post/new/", views.post_new, name="post_new"),
     path("post/<int:pk>/", views.post_detail, name="post_detail"),
     path("post/<int:pk>/edit/", views.post_edit, name="post_edit"),
+    path("post/<int:pk>/download/", views.post_download, name="post_download"),
+    path("post/<int:pk>/delete/", views.post_delete, name="post_delete"),
     path("js_test/", views.js_test, name="js_test"),
     path("api_root/", include(router.urls)),
 ]

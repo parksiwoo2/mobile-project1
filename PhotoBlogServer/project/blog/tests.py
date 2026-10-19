@@ -9,7 +9,7 @@ from urllib.request import Request, urlopen
 from PIL import Image
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import LiveServerTestCase, override_settings
+from django.test import Client, LiveServerTestCase, override_settings
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 from .models import Post
@@ -76,11 +76,28 @@ class PostAPITests(APITestCase):
         Post.objects.bulk_create([Post(title=f"사진 {i}", image=original.image.name, author=self.user) for i in range(21)])
         self.assertEqual(len(self.client.get(self.url).json()), 22)
 
-    def test_missing_and_invalid_token(self):
-        self.assertEqual(self.client.post(self.url, {}).status_code, 401)
+    def test_invalid_token(self):
         self.client.credentials(HTTP_AUTHORIZATION="Token wrong")
         self.assertEqual(self.client.post(self.url, {}).status_code, 401)
         self.assertEqual(self.client.get(self.url).status_code, 401)
+
+    def test_anonymous_upload_and_write_permissions(self):
+        response = self.client.post(self.url, {"title": "익명 사진", "image": photo(), "author": self.user.pk}, format="multipart")
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNone(response.data["author"])
+        post = Post.objects.get()
+        self.assertIsNone(post.author)
+        url = self.url + str(post.pk) + "/"
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+        self.assertEqual(self.client.patch(url, {"title": "변경"}).status_code, 401)
+        self.assertEqual(self.client.delete(url).status_code, 401)
+        self.authorize()
+        self.assertEqual(self.client.patch(url, {"title": "변경"}).status_code, 403)
+        self.assertEqual(self.client.delete(url).status_code, 403)
+        self.user.is_staff = True
+        self.user.save()
+        self.assertEqual(self.client.patch(url, {"title": "관리자 수정"}).status_code, 200)
+        self.assertEqual(self.client.delete(url).status_code, 204)
 
     def test_author_and_dates_cannot_be_forged(self):
         other = get_user_model().objects.create_user("other")
@@ -143,12 +160,77 @@ class PostAPITests(APITestCase):
         created.refresh_from_db()
         self.assertEqual(created.title, "웹 수정")
 
+    def test_web_search_title_text_and_empty_result(self):
+        self.create_post("서울 여행")
+        original = Post.objects.get()
+        Post.objects.create(title="부산", text="해운대", image=original.image.name)
+        for term in ("서울", "한강"):
+            response = self.client.get("/", {"q": term})
+            self.assertEqual([p.pk for p in response.context["posts"]], [original.pk])
+        self.assertContains(self.client.get("/", {"q": "없는검색어"}), "검색 결과가 없습니다")
+        self.assertEqual(self.client.get("/", {"q": "  "}).context["page_obj"].paginator.count, 2)
+
+    def test_web_sort_and_pagination_preserve_filters(self):
+        self.create_post("검색 첫 사진")
+        original = Post.objects.get()
+        for i in range(7):
+            Post.objects.create(title=f"검색 사진 {i}", image=original.image.name, published_date=original.published_date)
+        first = self.client.get("/", {"q": "검색", "sort": "oldest"})
+        self.assertEqual(len(first.context["posts"]), 6)
+        self.assertEqual(first.context["posts"][0].pk, original.pk)
+        self.assertContains(first, "sort=oldest&amp;page=2")
+        second = self.client.get("/", {"q": "검색", "sort": "oldest", "page": 2})
+        self.assertEqual(len(second.context["posts"]), 2)
+        newest = self.client.get("/", {"sort": "newest"})
+        self.assertEqual(newest.context["posts"][0].pk, Post.objects.latest("pk").pk)
+        self.assertEqual(self.client.get("/", {"sort": "invalid", "page": "bad"}).context["sort"], "newest")
+        self.assertEqual(self.client.get("/", {"page": 999}).context["page_obj"].number, 2)
+        self.assertEqual(len(self.client.get(self.url).json()), 8)
+
+    def test_photo_download_and_missing_file(self):
+        self.create_post()
+        post = Post.objects.get()
+        self.client.credentials()
+        response = self.client.get(f"/post/{post.pk}/download/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("attachment;", response["Content-Disposition"])
+        self.assertEqual(b"".join(response.streaming_content), photo().read())
+        response.close()
+        self.assertEqual(self.client.get("/post/99999/download/").status_code, 404)
+        post.image.delete(save=False)
+        self.assertEqual(self.client.get(f"/post/{post.pk}/download/").status_code, 404)
+
+    def test_web_delete_confirmation_permissions_and_csrf(self):
+        self.create_post()
+        post = Post.objects.get()
+        url = f"/post/{post.pk}/delete/"
+        browser = Client(enforce_csrf_checks=True)
+        self.assertEqual(browser.get(url).status_code, 302)
+        self.assertEqual(browser.post(url).status_code, 403)
+        other = get_user_model().objects.create_user("reader")
+        browser.force_login(other)
+        self.assertEqual(browser.get(url).status_code, 403)
+        browser.force_login(self.user)
+        self.assertContains(browser.get(url), "삭제 확인")
+        self.assertTrue(Post.objects.filter(pk=post.pk).exists())
+        self.assertEqual(browser.post(url).status_code, 403)
+        response = browser.post(url, {"csrfmiddlewaretoken": browser.cookies["csrftoken"].value})
+        self.assertRedirects(response, "/")
+        self.assertFalse(Post.objects.filter(pk=post.pk).exists())
+
+    def test_staff_can_delete_anonymous_web_post(self):
+        post = Post.objects.create(title="익명 사진", image=photo())
+        self.user.is_staff = True
+        self.user.save()
+        self.client.force_login(self.user)
+        self.assertContains(self.client.get(f"/post/{post.pk}/"), "삭제")
+        self.assertEqual(self.client.post(f"/post/{post.pk}/delete/").status_code, 302)
+        self.assertFalse(Post.objects.filter(pk=post.pk).exists())
+
 
 class HTTPIntegrationTests(LiveServerTestCase):
     def test_android_multipart_and_http_json_verifier(self):
         with tempfile.TemporaryDirectory() as directory, override_settings(MEDIA_ROOT=directory):
-            user = get_user_model().objects.create_user("http-tester")
-            token = Token.objects.create(user=user).key
             boundary = "PhotoBlogIntegrationBoundary"
             body = (
                 f'--{boundary}\r\nContent-Disposition: form-data; name="title"\r\n\r\nHTTP 사진\r\n'
@@ -156,7 +238,6 @@ class HTTPIntegrationTests(LiveServerTestCase):
                 f'--{boundary}\r\nContent-Disposition: form-data; name="image"; filename="photo.png"\r\nContent-Type: application/octet-stream\r\n\r\n'
             ).encode("utf-8") + photo().read() + f"\r\n--{boundary}--\r\n".encode()
             request = Request(self.live_server_url + "/api_root/Post/", data=body, headers={
-                "Authorization": "Token " + token,
                 "Content-Type": "multipart/form-data; boundary=" + boundary,
                 "Accept": "application/json",
             })
@@ -165,11 +246,11 @@ class HTTPIntegrationTests(LiveServerTestCase):
                 self.assertEqual(json.load(response)["text"], "Android multipart 형식")
             script = Path(__file__).resolve().parents[2] / "tools" / "verify_api.py"
             output = Path(directory) / "verification"
-            env = dict(os.environ, PHOTO_API_TOKEN=token, PYTHONIOENCODING="utf-8")
+            env = dict(os.environ, PYTHONIOENCODING="utf-8")
+            env.pop("PHOTO_API_TOKEN", None)
             result = subprocess.run([sys.executable, str(script), "--base-url", self.live_server_url, "--output-dir", str(output)], capture_output=True, text=True, encoding="utf-8", env=env, timeout=30)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertNotIn(token, result.stdout)
             posts = json.loads((output / "posts.json").read_text(encoding="utf-8"))
             self.assertEqual(len(posts), 1)
-            self.assertEqual(posts[0]["author"], user.pk)
+            self.assertIsNone(posts[0]["author"])
             self.assertIn("application/json", (output / "response.txt").read_text(encoding="utf-8"))

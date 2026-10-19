@@ -1,13 +1,33 @@
-{% extends "blog/base.html" %} {% block content %} {% for post in posts %}
+{% extends "blog/base.html" %}
+{% block content %}
+<form method="get" class="filters">
+  <label for="query">제목·내용 검색</label>
+  <input id="query" type="search" name="q" value="{{ query }}" placeholder="검색어를 입력하세요" />
+  <label for="sort">정렬</label>
+  <select id="sort" name="sort">
+    <option value="newest" {% if sort == "newest" %}selected{% endif %}>최신순</option>
+    <option value="oldest" {% if sort == "oldest" %}selected{% endif %}>오래된순</option>
+  </select>
+  <button type="submit">적용</button>
+  <a href="{% url 'post_list' %}">초기화</a>
+</form>
+<p>게시물 {{ page_obj.paginator.count }}개</p>
+{% for post in posts %}
 <article>
   <small>{{ post.published_date|date:"Y년 m월 d일 H:i" }}</small>
   <h2><a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a></h2>
   <p>{{ post.text }}</p>
-  <img src="{{ post.image.url }}" alt="{{ post.title }}" />
+  <a href="{% url 'post_detail' post.pk %}"><img src="{{ post.image.url }}" alt="{{ post.title }}" /></a>
 </article>
 {% empty %}
-<p>
-  아직 게시물이 없습니다. 로그인 후 새 글을 작성하거나 Android 앱에서
-  업로드하세요.
-</p>
-{% endfor %} {% endblock %}
+{% if query %}<p>검색 결과가 없습니다. 다른 검색어를 입력하세요.</p>
+{% else %}<p>아직 게시물이 없습니다. 로그인 후 새 글을 작성하거나 Android 앱에서 업로드하세요.</p>{% endif %}
+{% endfor %}
+{% if page_obj.has_other_pages %}
+<nav aria-label="게시물 페이지" class="pagination">
+  {% if page_obj.has_previous %}<a href="?{{ page_query }}&amp;page={{ page_obj.previous_page_number }}">이전</a>{% endif %}
+  <span>{{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 페이지</span>
+  {% if page_obj.has_next %}<a href="?{{ page_query }}&amp;page={{ page_obj.next_page_number }}">다음</a>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}
