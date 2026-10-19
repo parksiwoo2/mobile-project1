@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/main" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
-<EditText android:id="@+id/server" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="서버 주소" android:text="http://10.0.2.2:8000" android:inputType="textUri" android:singleLine="true"/>
+<EditText android:id="@+id/server" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="서버 주소" android:text="https://siwoopark.pythonanywhere.com" android:inputType="textUri" android:singleLine="true"/>
 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
 <Button android:id="@+id/btn_load" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="동기화"/>
 <Button android:id="@+id/btn_save" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="새로운 이미지 게시"/>

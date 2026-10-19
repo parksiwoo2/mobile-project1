@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
         if ((!url.getProtocol().equals("http") && !url.getProtocol().equals("https"))
                 || url.getHost().isEmpty() || !url.getPath().isEmpty()
                 || url.getUserInfo() != null || url.getQuery() != null || url.getRef() != null)
-            throw new IOException("서버 주소는 http://10.0.2.2:8000 형태로 입력하세요.");
+            throw new IOException("서버 주소는 https://siwoopark.pythonanywhere.com 형태로 입력하세요.");
         return value;
     }
 
